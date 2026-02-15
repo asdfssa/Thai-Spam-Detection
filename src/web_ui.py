@@ -19,6 +19,18 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from model_training import SpamDetectionModel
 from model_evaluation import ModelEvaluator
 
+# --- โหลดโมเดล Deep Learning (ใส่ Cache ไว้เพื่อประสิทธิภาพ) ---
+@st.cache_resource
+def load_hf_pipeline():
+    try:
+        from transformers import pipeline
+        model_path = "models/wangchanberta_model"
+        if os.path.exists(model_path):
+            return pipeline("text-classification", model=model_path, tokenizer=model_path)
+    except Exception:
+        return None
+    return None
+
 # Page configuration
 st.set_page_config(
     page_title="Thai Spam Detection System",
@@ -27,12 +39,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Custom CSS (ปรับแก้สีพื้นหลังบางส่วนให้เข้ากับ Dark Theme)
 st.markdown("""
 <style>
     .main-header {
         font-size: 2.5rem;
-        color: #1f77b4;
+        color: #4dabf7; /* ปรับสีฟ้าให้สว่างขึ้นสำหรับ Dark Mode */
         text-align: center;
         margin-bottom: 2rem;
     }
@@ -42,19 +54,14 @@ st.markdown("""
         margin: 1rem 0;
     }
     .spam-box {
-        background-color: #ff6b6b;
-        color: white;
+        background-color: rgba(255, 107, 107, 0.2); /* ทำให้โปร่งแสงสไตล์ Dark Mode */
+        border: 1px solid #ff6b6b;
+        color: #ffc9c9;
     }
     .ham-box {
-        background-color: #2d6a4f;
-        color: white;
-    }
-    .metric-card {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid #1f77b4;
-        margin: 0.5rem 0;
+        background-color: rgba(45, 106, 79, 0.4); /* ทำให้โปร่งแสงสไตล์ Dark Mode */
+        border: 1px solid #40c057;
+        color: #b2f2bb;
     }
     .status-indicator {
         display: inline-block;
@@ -63,7 +70,7 @@ st.markdown("""
         border-radius: 50%;
         margin-right: 8px;
     }
-    .status-ready { background-color: #2d6a4f; }
+    .status-ready { background-color: #40c057; }
     .status-processing { background-color: #ffd43b; }
     .status-error { background-color: #ff6b6b; }
 </style>
@@ -72,32 +79,48 @@ st.markdown("""
 class ThaiSpamDetectionUI:
     def __init__(self):
         self.model = None
+        self.hf_model = None  
         self.evaluator = None
         self.model_loaded = False
+        self.active_model_type = "Deep Learning (WangchanBERTa)" # 🔥 ตั้งค่าเริ่มต้นเป็นโมเดล DL
         
     def load_model_components(self):
         """Load model and preprocessing components"""
         try:
+            # 1. โหลด TF-IDF แบบเดิม
             self.model = SpamDetectionModel()
             self.evaluator = ModelEvaluator()
             
-            # Try to load model and components
             model_path = "models/spam_detection_model.pkl"
             vectorizer_path = "models/vectorizer.pkl"
             encoder_path = "models/label_encoder.pkl"
             
             if os.path.exists(model_path) and os.path.exists(vectorizer_path) and os.path.exists(encoder_path):
-                model_loaded = self.model.load_model(model_path)
-                preprocessor_loaded = self.model.preprocessor.load_preprocessor(vectorizer_path, encoder_path)
-                
-                if model_loaded and preprocessor_loaded:
-                    self.model_loaded = True
-                    return True
+                self.model.load_model(model_path)
+                self.model.preprocessor.load_preprocessor(vectorizer_path, encoder_path)
             
-            return False
+            # 2. โหลด Deep Learning
+            self.hf_model = load_hf_pipeline()
+            
         except Exception as e:
-            st.error(f"Error loading model: {e}")
-            return False
+            st.error(f"Error loading models: {e}")
+
+    # --- ฟังก์ชัน Wrapper สำหรับสลับการใช้โมเดล ---
+    def predict_message(self, text):
+        if self.active_model_type == "Machine Learning (TF-IDF)":
+            return self.model.predict(text)
+        elif self.active_model_type == "Deep Learning (WangchanBERTa)":
+            if not self.hf_model:
+                return None
+            result = self.hf_model(text)[0]
+            is_spam = result['label'] == 'LABEL_1'
+            confidence = result['score']
+            return {
+                'label': 'spam' if is_spam else 'ham',
+                'confidence': confidence,
+                'spam_probability': confidence if is_spam else 1 - confidence
+            }
+        return None
     
     def render_header(self):
         """Render application header"""
@@ -106,6 +129,20 @@ class ThaiSpamDetectionUI:
     
     def render_sidebar(self):
         """Render sidebar with model status and information"""
+        st.sidebar.markdown("## ⚙️ Model Selection")
+        # 🔥 สลับเอา Deep Learning ขึ้นเป็นตัวเลือกแรกใน Dropdown
+        self.active_model_type = st.sidebar.selectbox(
+            "Choose Detection Model:",
+            ["Deep Learning (WangchanBERTa)", "Machine Learning (TF-IDF)"]
+        )
+        st.sidebar.markdown("---")
+        
+        # อัปเดตสถานะ Model Loaded ตามตัวเลือกปัจจุบัน
+        if self.active_model_type == "Machine Learning (TF-IDF)":
+            self.model_loaded = (self.model is not None and getattr(self.model, 'model', None) is not None)
+        else:
+            self.model_loaded = (self.hf_model is not None)
+
         st.sidebar.markdown("## 📊 System Status")
         
         # Model status
@@ -114,14 +151,13 @@ class ThaiSpamDetectionUI:
                 '<span class="status-indicator status-ready"></span>Model Ready', 
                 unsafe_allow_html=True
             )
-            if self.model.model_name:
-                st.sidebar.info(f"Model: {self.model.model_name}")
+            st.sidebar.info(f"Active: {self.active_model_type.split(' ')[0]}")
         else:
             st.sidebar.markdown(
                 '<span class="status-indicator status-error"></span>Model Not Loaded', 
                 unsafe_allow_html=True
             )
-            st.sidebar.warning("Please train the model first using the training script.")
+            st.sidebar.warning("Model files missing for selected type.")
         
         st.sidebar.markdown("---")
         st.sidebar.markdown("## ℹ️ Information")
@@ -130,7 +166,7 @@ class ThaiSpamDetectionUI:
         
         **Features:**
         - Thai text preprocessing with pythainlp
-        - Multiple ML algorithms
+        - Multiple ML algorithms (TF-IDF & Deep Learning)
         - Real-time prediction
         - Confidence scoring
         - Performance visualization
@@ -138,7 +174,7 @@ class ThaiSpamDetectionUI:
     
     def render_prediction_interface(self):
         """Render main prediction interface"""
-        st.markdown("## 🔍 Message Analysis")
+        st.markdown(f"## 🔍 Message Analysis *(Using: {self.active_model_type.split(' ')[0]})*")
         
         # Sample messages
         sample_spam_messages = [
@@ -184,7 +220,6 @@ class ThaiSpamDetectionUI:
         
         with col2:
             st.markdown("### Quick Actions")
-            # ใช้ on_click เพื่อสั่งให้ Streamlit ทำงานอัปเดตค่าก่อนวาดหน้าใหม่
             st.button("📋 Sample Spam", use_container_width=True, on_click=update_text, args=('spam',))
             st.button("📋 Sample Ham", use_container_width=True, on_click=update_text, args=('ham',))
             st.button("🗑️ Clear", use_container_width=True, on_click=update_text, args=('clear',))
@@ -192,7 +227,7 @@ class ThaiSpamDetectionUI:
         # Prediction button
         if st.button("🚀 Analyze Message", use_container_width=True, type="primary"):
             if not self.model_loaded:
-                st.error("❌ Model not loaded. Please train the model first.")
+                st.error("❌ Model not loaded. Please train or provide the model first.")
                 return
             
             if not message_text.strip():
@@ -200,12 +235,12 @@ class ThaiSpamDetectionUI:
                 return
             
             # Show processing status
-            with st.spinner("🔄 Analyzing message..."):
+            with st.spinner(f"🔄 Analyzing message with {self.active_model_type.split(' ')[0]}..."):
                 time.sleep(1)  # Simulate processing
                 
                 try:
-                    # Make prediction
-                    result = self.model.predict(message_text)
+                    # Make prediction using the wrapper
+                    result = self.predict_message(message_text)
                     
                     if result:
                         self.render_prediction_result(result, message_text)
@@ -273,7 +308,9 @@ class ThaiSpamDetectionUI:
             1 - result['spam_probability'],
             result['spam_probability']
         ]
-        colors = ['#2d6a4f', '#ff6b6b']
+        
+        # 🔥 ปรับสีกราฟให้เข้ากับ Dark Theme
+        colors = ['#40c057', '#ff6b6b'] 
         
         fig = go.Figure(data=[
             go.Bar(
@@ -289,7 +326,10 @@ class ThaiSpamDetectionUI:
             title="Classification Probability",
             yaxis_title="Probability",
             showlegend=False,
-            height=400
+            height=400,
+            paper_bgcolor='rgba(0,0,0,0)', # พื้นหลังกราฟโปร่งใส
+            plot_bgcolor='rgba(0,0,0,0)',  # พื้นหลังกราฟโปร่งใส
+            font=dict(color='#FAFAFA')      # สีอักษรในกราฟ
         )
         
         st.plotly_chart(fig, use_container_width=True)
@@ -302,17 +342,21 @@ class ThaiSpamDetectionUI:
             st.markdown("**Original Text:**")
             st.text(original_text)
             
-            # Show cleaned text
-            cleaned_text = self.model.preprocessor.clean_text(original_text)
-            st.markdown("**Cleaned Text:**")
-            st.text(cleaned_text)
-            
-            # Show tokens
-            tokens = self.model.preprocessor.tokenize_thai(cleaned_text)
-            st.markdown("**Tokens:**")
-            st.text(' | '.join(tokens))
-            
-            st.markdown(f"**Number of tokens:** {len(tokens)}")
+            # แยกเงื่อนไขการแสดงผลรายละเอียดการตัดคำตามโมเดล
+            if self.active_model_type == "Machine Learning (TF-IDF)":
+                # Show cleaned text
+                cleaned_text = self.model.preprocessor.clean_text(original_text)
+                st.markdown("**Cleaned Text:**")
+                st.text(cleaned_text)
+                
+                # Show tokens
+                tokens = self.model.preprocessor.tokenize_thai(cleaned_text)
+                st.markdown("**Tokens:**")
+                st.text(' | '.join(tokens))
+                st.markdown(f"**Number of tokens:** {len(tokens)}")
+            else:
+                st.markdown("**Processing Method:**")
+                st.text("Subword Tokenization (Processed natively by Hugging Face Transformer)")
     
     def render_batch_analysis(self):
         """Render batch analysis interface"""
@@ -340,7 +384,8 @@ class ThaiSpamDetectionUI:
                         
                         for i, message in enumerate(df['message']):
                             if pd.notna(message):
-                                result = self.model.predict(str(message))
+                                # ใช้ predict_message wrapper แทน self.model.predict
+                                result = self.predict_message(str(message))
                                 results.append(result)
                             progress_bar.progress((i + 1) / len(df))
                         
@@ -374,8 +419,9 @@ class ThaiSpamDetectionUI:
                             names='label',
                             title='Message Classification Distribution',
                             color='label',
-                            color_discrete_map={'spam': '#ff6b6b', 'ham': '#2d6a4f'}
+                            color_discrete_map={'spam': '#ff6b6b', 'ham': '#40c057'}
                         )
+                        fig_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#FAFAFA'))
                         st.plotly_chart(fig_pie, use_container_width=True)
                         
                         # Confidence distribution
@@ -385,8 +431,9 @@ class ThaiSpamDetectionUI:
                             color='label',
                             title='Confidence Score Distribution',
                             nbins=20,
-                            color_discrete_map={'spam': '#ff6b6b', 'ham': '#2d6a4f'}
+                            color_discrete_map={'spam': '#ff6b6b', 'ham': '#40c057'}
                         )
+                        fig_hist.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#FAFAFA'))
                         st.plotly_chart(fig_hist, use_container_width=True)
                         
                         # Download results
@@ -407,7 +454,7 @@ class ThaiSpamDetectionUI:
         st.markdown("## 🤖 Model Information")
         
         if not self.model_loaded:
-            st.warning("⚠️ Model not loaded. Please train the model first.")
+            st.warning("⚠️ Model not loaded. Please provide model files.")
             return
         
         # Model details
@@ -415,53 +462,68 @@ class ThaiSpamDetectionUI:
         
         with col1:
             st.markdown("### Model Details")
-            st.info(f"""
-            **Model Type:** {self.model.model_name or 'Unknown'}
-            
-            **Preprocessing:**
-            - Thai text tokenization (pythainlp)
-            - TF-IDF vectorization
-            - Text normalization
-            """)
+            if self.active_model_type == "Machine Learning (TF-IDF)":
+                st.info(f"""
+                **Model Type:** {self.model.model_name or 'Unknown'}
+                
+                **Preprocessing:**
+                - Thai text tokenization (pythainlp)
+                - TF-IDF vectorization
+                - Text normalization
+                """)
+            else:
+                st.info("""
+                **Model Type:** WangchanBERTa (Deep Learning)
+                
+                **Preprocessing:**
+                - Subword Tokenization
+                - Bidirectional Context Analysis
+                """)
         
         with col2:
             st.markdown("### Feature Information")
-            if self.model.preprocessor.vectorizer:
-                feature_count = self.model.preprocessor.vectorizer.get_feature_names_out().shape[0]
-                st.info(f"""
-                **Vocabulary Size:** {feature_count:,} features
-                
-                **Vectorization:** TF-IDF
-                
-                **Labels:** {list(self.model.preprocessor.label_encoder.classes_)}
+            if self.active_model_type == "Machine Learning (TF-IDF)":
+                if getattr(self, 'model', None) and getattr(self.model, 'preprocessor', None) and getattr(self.model.preprocessor, 'vectorizer', None):
+                    feature_count = self.model.preprocessor.vectorizer.get_feature_names_out().shape[0]
+                    st.info(f"""
+                    **Vocabulary Size:** {feature_count:,} features
+                    
+                    **Vectorization:** TF-IDF
+                    
+                    **Labels:** {list(self.model.preprocessor.label_encoder.classes_)}
+                    """)
+            else:
+                st.info("""
+                **Architecture:** RoBERTa-base
+                **Parameters:** ~110 Million
+                **Input Size:** Max 128 Tokens
                 """)
         
-        # Performance visualization (if available)
-        st.markdown("### 📊 Performance Metrics")
-        
-        # Check if evaluation results exist
-        eval_results_path = "results/evaluation_report.txt"
-        if os.path.exists(eval_results_path):
-            try:
-                with open(eval_results_path, 'r', encoding='utf-8') as f:
-                    report_content = f.read()
-                
-                with st.expander("View Detailed Evaluation Report"):
-                    st.text(report_content)
-                
-                # Try to load and display confusion matrix
-                cm_path = "results/confusion_matrix.png"
-                if os.path.exists(cm_path):
-                    st.image(cm_path, caption="Confusion Matrix")
-                
-            except Exception as e:
-                st.warning(f"Could not load evaluation results: {e}")
-        else:
-            st.info("📝 No evaluation results found. Run the evaluation script to generate performance metrics.")
+        # Performance visualization (if available) - โชว์เฉพาะตอนเลือก TF-IDF
+        if self.active_model_type == "Machine Learning (TF-IDF)":
+            st.markdown("### 📊 Performance Metrics (TF-IDF)")
+            eval_results_path = "results/evaluation_report.txt"
+            if os.path.exists(eval_results_path):
+                try:
+                    with open(eval_results_path, 'r', encoding='utf-8') as f:
+                        report_content = f.read()
+                    
+                    with st.expander("View Detailed Evaluation Report"):
+                        st.text(report_content)
+                    
+                    # Try to load and display confusion matrix
+                    cm_path = "results/confusion_matrix.png"
+                    if os.path.exists(cm_path):
+                        st.image(cm_path, caption="Confusion Matrix")
+                        
+                except Exception as e:
+                    st.warning(f"Could not load evaluation results: {e}")
+            else:
+                st.info("📝 No evaluation results found. Run the evaluation script to generate performance metrics.")
     
     def run(self):
         """Main application runner"""
-        # Load model components
+        # Load model components (โหลดไว้ก่อนทั้งคู่)
         self.load_model_components()
         
         # Render UI components
@@ -483,8 +545,8 @@ class ThaiSpamDetectionUI:
         # Footer
         st.markdown("---")
         st.markdown(
-            "<div style='text-align: center; color: #666;'>"
-            "Thai Spam Detection System © 2024 | Built with Streamlit & pythainlp"
+            "<div style='text-align: center; color: #888;'>"
+            "Thai Spam Detection System © 2026 | Built with Streamlit & Transformers"
             "</div>", 
             unsafe_allow_html=True
         )
