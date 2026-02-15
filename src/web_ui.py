@@ -24,7 +24,7 @@ from model_evaluation import ModelEvaluator
 def load_hf_pipeline():
     try:
         from transformers import pipeline
-        model_path = "models/wangchanberta_model"
+        model_path = "MuneTH1/thai-spam-wangchanberta"
         if os.path.exists(model_path):
             return pipeline("text-classification", model=model_path, tokenizer=model_path)
     except Exception:
