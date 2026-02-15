@@ -19,17 +19,17 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from model_training import SpamDetectionModel
 from model_evaluation import ModelEvaluator
 
-# --- โหลดโมเดล Deep Learning (ใส่ Cache ไว้เพื่อประสิทธิภาพ) ---
+# --- โหลดโมเดล Deep Learning จาก Hugging Face (แก้ไขส่วนนี้เพื่อรองรับ Cloud) ---
 @st.cache_resource
 def load_hf_pipeline():
     try:
         from transformers import pipeline
-        model_path = "MuneTH1/thai-spam-wangchanberta"
-        if os.path.exists(model_path):
-            return pipeline("text-classification", model=model_path, tokenizer=model_path)
-    except Exception:
+        model_id = "MuneTH1/thai-spam-wangchanberta" 
+        
+        return pipeline("text-classification", model=model_id, tokenizer=model_id)
+    except Exception as e:
+        st.error(f"Error loading model from Hugging Face: {e}")
         return None
-    return None
 
 # Page configuration
 st.set_page_config(
@@ -39,12 +39,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS (ปรับแก้สีพื้นหลังบางส่วนให้เข้ากับ Dark Theme)
+# Custom CSS (คงเดิม)
 st.markdown("""
 <style>
     .main-header {
         font-size: 2.5rem;
-        color: #4dabf7; /* ปรับสีฟ้าให้สว่างขึ้นสำหรับ Dark Mode */
+        color: #4dabf7; 
         text-align: center;
         margin-bottom: 2rem;
     }
@@ -54,12 +54,12 @@ st.markdown("""
         margin: 1rem 0;
     }
     .spam-box {
-        background-color: rgba(255, 107, 107, 0.2); /* ทำให้โปร่งแสงสไตล์ Dark Mode */
+        background-color: rgba(255, 107, 107, 0.2); 
         border: 1px solid #ff6b6b;
         color: #ffc9c9;
     }
     .ham-box {
-        background-color: rgba(45, 106, 79, 0.4); /* ทำให้โปร่งแสงสไตล์ Dark Mode */
+        background-color: rgba(45, 106, 79, 0.4); 
         border: 1px solid #40c057;
         color: #b2f2bb;
     }
@@ -82,7 +82,7 @@ class ThaiSpamDetectionUI:
         self.hf_model = None  
         self.evaluator = None
         self.model_loaded = False
-        self.active_model_type = "Deep Learning (WangchanBERTa)" # 🔥 ตั้งค่าเริ่มต้นเป็นโมเดล DL
+        self.active_model_type = "Deep Learning (WangchanBERTa)" 
         
     def load_model_components(self):
         """Load model and preprocessing components"""
@@ -99,13 +99,12 @@ class ThaiSpamDetectionUI:
                 self.model.load_model(model_path)
                 self.model.preprocessor.load_preprocessor(vectorizer_path, encoder_path)
             
-            # 2. โหลด Deep Learning
+            # 2. โหลด Deep Learning (ผ่านฟังก์ชันที่แก้ใหม่)
             self.hf_model = load_hf_pipeline()
             
         except Exception as e:
             st.error(f"Error loading models: {e}")
 
-    # --- ฟังก์ชัน Wrapper สำหรับสลับการใช้โมเดล ---
     def predict_message(self, text):
         if self.active_model_type == "Machine Learning (TF-IDF)":
             return self.model.predict(text)
@@ -123,21 +122,17 @@ class ThaiSpamDetectionUI:
         return None
     
     def render_header(self):
-        """Render application header"""
         st.markdown('<h1 class="main-header">🛡️ Thai Spam Detection System</h1>', unsafe_allow_html=True)
         st.markdown("---")
     
     def render_sidebar(self):
-        """Render sidebar with model status and information"""
         st.sidebar.markdown("## ⚙️ Model Selection")
-        # 🔥 สลับเอา Deep Learning ขึ้นเป็นตัวเลือกแรกใน Dropdown
         self.active_model_type = st.sidebar.selectbox(
             "Choose Detection Model:",
             ["Deep Learning (WangchanBERTa)", "Machine Learning (TF-IDF)"]
         )
         st.sidebar.markdown("---")
         
-        # อัปเดตสถานะ Model Loaded ตามตัวเลือกปัจจุบัน
         if self.active_model_type == "Machine Learning (TF-IDF)":
             self.model_loaded = (self.model is not None and getattr(self.model, 'model', None) is not None)
         else:
@@ -145,7 +140,6 @@ class ThaiSpamDetectionUI:
 
         st.sidebar.markdown("## 📊 System Status")
         
-        # Model status
         if self.model_loaded:
             st.sidebar.markdown(
                 '<span class="status-indicator status-ready"></span>Model Ready', 
@@ -173,10 +167,8 @@ class ThaiSpamDetectionUI:
         """)
     
     def render_prediction_interface(self):
-        """Render main prediction interface"""
         st.markdown(f"## 🔍 Message Analysis *(Using: {self.active_model_type.split(' ')[0]})*")
         
-        # Sample messages
         sample_spam_messages = [
             "มีคดีค้างชำระ ตรวจสอบด่วน http://bank-confirm.site/09wq0o",
             "ระบบพบความผิดปกติ OTP:9558 กรอกที่ http://delivery-check.me/o15ls9 💰",
@@ -193,7 +185,6 @@ class ThaiSpamDetectionUI:
             "ดูคลิปนี้สิ http://facebook.com/k0ai5i 😱"
         ]
         
-        # --- Callback Function สำหรับจัดการปุ่มกด ---
         def update_text(action):
             import random
             if action == 'spam':
@@ -203,11 +194,9 @@ class ThaiSpamDetectionUI:
             elif action == 'clear':
                 st.session_state.message_input = ""
 
-        # Initialize session state (ถ้ายังไม่มี)
         if 'message_input' not in st.session_state:
             st.session_state.message_input = ""
             
-        # Input section
         col1, col2 = st.columns([3, 1])
         
         with col1:
@@ -224,7 +213,6 @@ class ThaiSpamDetectionUI:
             st.button("📋 Sample Ham", use_container_width=True, on_click=update_text, args=('ham',))
             st.button("🗑️ Clear", use_container_width=True, on_click=update_text, args=('clear',))
         
-        # Prediction button
         if st.button("🚀 Analyze Message", use_container_width=True, type="primary"):
             if not self.model_loaded:
                 st.error("❌ Model not loaded. Please train or provide the model first.")
@@ -234,12 +222,10 @@ class ThaiSpamDetectionUI:
                 st.warning("⚠️ Please enter a message to analyze.")
                 return
             
-            # Show processing status
             with st.spinner(f"🔄 Analyzing message with {self.active_model_type.split(' ')[0]}..."):
-                time.sleep(1)  # Simulate processing
+                time.sleep(1) 
                 
                 try:
-                    # Make prediction using the wrapper
                     result = self.predict_message(message_text)
                     
                     if result:
@@ -251,10 +237,8 @@ class ThaiSpamDetectionUI:
                     st.error(f"❌ Error during analysis: {e}")
     
     def render_prediction_result(self, result, original_text):
-        """Render prediction results with visualization"""
         st.markdown("### 📊 Analysis Results")
         
-        # Result box
         if result['label'].lower() == 'spam':
             st.markdown(f"""
             <div class="prediction-box spam-box">
@@ -272,44 +256,23 @@ class ThaiSpamDetectionUI:
             </div>
             """, unsafe_allow_html=True)
         
-        # Detailed metrics
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric(
-                "Prediction",
-                result['label'].upper(),
-                delta=None
-            )
+            st.metric("Prediction", result['label'].upper())
         
         with col2:
-            st.metric(
-                "Confidence",
-                f"{result['confidence']:.2%}",
-                delta=None
-            )
+            st.metric("Confidence", f"{result['confidence']:.2%}")
         
         with col3:
             spam_prob = result['spam_probability']
             color = "normal" if spam_prob < 0.5 else "inverse"
-            st.metric(
-                "Spam Risk",
-                f"{spam_prob:.2%}",
-                delta=None,
-                delta_color=color
-            )
+            st.metric("Spam Risk", f"{spam_prob:.2%}", delta_color=color)
         
-        # Probability visualization
         st.markdown("### 📈 Probability Distribution")
         
-        # Create probability chart
         labels = ['Ham', 'Spam']
-        values = [
-            1 - result['spam_probability'],
-            result['spam_probability']
-        ]
-        
-        # 🔥 ปรับสีกราฟให้เข้ากับ Dark Theme
+        values = [1 - result['spam_probability'], result['spam_probability']]
         colors = ['#40c057', '#ff6b6b'] 
         
         fig = go.Figure(data=[
@@ -327,29 +290,24 @@ class ThaiSpamDetectionUI:
             yaxis_title="Probability",
             showlegend=False,
             height=400,
-            paper_bgcolor='rgba(0,0,0,0)', # พื้นหลังกราฟโปร่งใส
-            plot_bgcolor='rgba(0,0,0,0)',  # พื้นหลังกราฟโปร่งใส
-            font=dict(color='#FAFAFA')      # สีอักษรในกราฟ
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)', 
+            font=dict(color='#FAFAFA')
         )
         
         st.plotly_chart(fig, use_container_width=True)
         
-        # Text analysis details
         st.markdown("### 🔍 Text Analysis Details")
         
         with st.expander("View preprocessing details"):
-            # Show original text
             st.markdown("**Original Text:**")
             st.text(original_text)
             
-            # แยกเงื่อนไขการแสดงผลรายละเอียดการตัดคำตามโมเดล
             if self.active_model_type == "Machine Learning (TF-IDF)":
-                # Show cleaned text
                 cleaned_text = self.model.preprocessor.clean_text(original_text)
                 st.markdown("**Cleaned Text:**")
                 st.text(cleaned_text)
                 
-                # Show tokens
                 tokens = self.model.preprocessor.tokenize_thai(cleaned_text)
                 st.markdown("**Tokens:**")
                 st.text(' | '.join(tokens))
@@ -359,14 +317,8 @@ class ThaiSpamDetectionUI:
                 st.text("Subword Tokenization (Processed natively by Hugging Face Transformer)")
     
     def render_batch_analysis(self):
-        """Render batch analysis interface"""
         st.markdown("## 📁 Batch Analysis")
-        
-        uploaded_file = st.file_uploader(
-            "Upload CSV file with messages:",
-            type=['csv'],
-            help="CSV should have a 'message' column"
-        )
+        uploaded_file = st.file_uploader("Upload CSV file with messages:", type=['csv'], help="CSV should have a 'message' column")
         
         if uploaded_file is not None:
             try:
@@ -384,174 +336,64 @@ class ThaiSpamDetectionUI:
                         
                         for i, message in enumerate(df['message']):
                             if pd.notna(message):
-                                # ใช้ predict_message wrapper แทน self.model.predict
                                 result = self.predict_message(str(message))
                                 results.append(result)
                             progress_bar.progress((i + 1) / len(df))
                         
-                        # Create results dataframe
                         results_df = pd.DataFrame(results)
                         results_df['message'] = df['message']
                         
-                        # Show summary statistics
                         st.markdown("### 📊 Analysis Summary")
-                        
                         col1, col2, col3 = st.columns(3)
+                        with col1: st.metric("Spam Messages", (results_df['label'] == 'spam').sum())
+                        with col2: st.metric("Legitimate Messages", (results_df['label'] == 'ham').sum())
+                        with col3: st.metric("Avg Confidence", f"{results_df['confidence'].mean():.2%}")
                         
-                        with col1:
-                            spam_count = (results_df['label'] == 'spam').sum()
-                            st.metric("Spam Messages", spam_count)
-                        
-                        with col2:
-                            ham_count = (results_df['label'] == 'ham').sum()
-                            st.metric("Legitimate Messages", ham_count)
-                        
-                        with col3:
-                            avg_confidence = results_df['confidence'].mean()
-                            st.metric("Avg Confidence", f"{avg_confidence:.2%}")
-                        
-                        # Visualization
-                        st.markdown("### 📈 Results Visualization")
-                        
-                        # Pie chart
-                        fig_pie = px.pie(
-                            results_df,
-                            names='label',
-                            title='Message Classification Distribution',
-                            color='label',
-                            color_discrete_map={'spam': '#ff6b6b', 'ham': '#40c057'}
-                        )
-                        fig_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#FAFAFA'))
-                        st.plotly_chart(fig_pie, use_container_width=True)
-                        
-                        # Confidence distribution
-                        fig_hist = px.histogram(
-                            results_df,
-                            x='confidence',
-                            color='label',
-                            title='Confidence Score Distribution',
-                            nbins=20,
-                            color_discrete_map={'spam': '#ff6b6b', 'ham': '#40c057'}
-                        )
-                        fig_hist.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#FAFAFA'))
-                        st.plotly_chart(fig_hist, use_container_width=True)
-                        
-                        # Download results
-                        st.markdown("### 💾 Download Results")
                         csv = results_df.to_csv(index=False)
-                        st.download_button(
-                            label="📥 Download Results CSV",
-                            data=csv,
-                            file_name="spam_analysis_results.csv",
-                            mime="text/csv"
-                        )
-                        
+                        st.download_button(label="📥 Download Results CSV", data=csv, file_name="spam_analysis_results.csv", mime="text/csv")
             except Exception as e:
                 st.error(f"❌ Error processing file: {e}")
     
     def render_model_info(self):
-        """Render model information and performance metrics"""
         st.markdown("## 🤖 Model Information")
-        
         if not self.model_loaded:
-            st.warning("⚠️ Model not loaded. Please provide model files.")
+            st.warning("⚠️ Model not loaded.")
             return
         
-        # Model details
         col1, col2 = st.columns(2)
-        
         with col1:
             st.markdown("### Model Details")
             if self.active_model_type == "Machine Learning (TF-IDF)":
-                st.info(f"""
-                **Model Type:** {self.model.model_name or 'Unknown'}
-                
-                **Preprocessing:**
-                - Thai text tokenization (pythainlp)
-                - TF-IDF vectorization
-                - Text normalization
-                """)
+                st.info(f"**Model Type:** {self.model.model_name}\n\n**Preprocessing:**\n- Thai text tokenization\n- TF-IDF vectorization")
             else:
-                st.info("""
-                **Model Type:** WangchanBERTa (Deep Learning)
-                
-                **Preprocessing:**
-                - Subword Tokenization
-                - Bidirectional Context Analysis
-                """)
+                st.info("**Model Type:** WangchanBERTa (Deep Learning)\n\n**Preprocessing:**\n- Subword Tokenization\n- Context Analysis")
         
         with col2:
             st.markdown("### Feature Information")
             if self.active_model_type == "Machine Learning (TF-IDF)":
-                if getattr(self, 'model', None) and getattr(self.model, 'preprocessor', None) and getattr(self.model.preprocessor, 'vectorizer', None):
-                    feature_count = self.model.preprocessor.vectorizer.get_feature_names_out().shape[0]
-                    st.info(f"""
-                    **Vocabulary Size:** {feature_count:,} features
-                    
-                    **Vectorization:** TF-IDF
-                    
-                    **Labels:** {list(self.model.preprocessor.label_encoder.classes_)}
-                    """)
+                if getattr(self.model.preprocessor, 'vectorizer', None):
+                    st.info(f"**Vocabulary Size:** {self.model.preprocessor.vectorizer.get_feature_names_out().shape[0]:,} features")
             else:
-                st.info("""
-                **Architecture:** RoBERTa-base
-                **Parameters:** ~110 Million
-                **Input Size:** Max 128 Tokens
-                """)
-        
-        # Performance visualization (if available) - โชว์เฉพาะตอนเลือก TF-IDF
+                st.info("**Architecture:** RoBERTa-base\n**Parameters:** ~110 Million")
+
         if self.active_model_type == "Machine Learning (TF-IDF)":
             st.markdown("### 📊 Performance Metrics (TF-IDF)")
-            eval_results_path = "results/evaluation_report.txt"
-            if os.path.exists(eval_results_path):
-                try:
-                    with open(eval_results_path, 'r', encoding='utf-8') as f:
-                        report_content = f.read()
-                    
-                    with st.expander("View Detailed Evaluation Report"):
-                        st.text(report_content)
-                    
-                    # Try to load and display confusion matrix
-                    cm_path = "results/confusion_matrix.png"
-                    if os.path.exists(cm_path):
-                        st.image(cm_path, caption="Confusion Matrix")
-                        
-                except Exception as e:
-                    st.warning(f"Could not load evaluation results: {e}")
-            else:
-                st.info("📝 No evaluation results found. Run the evaluation script to generate performance metrics.")
+            if os.path.exists("results/evaluation_report.txt"):
+                with st.expander("View Report"):
+                    with open("results/evaluation_report.txt", 'r', encoding='utf-8') as f:
+                        st.text(f.read())
     
     def run(self):
-        """Main application runner"""
-        # Load model components (โหลดไว้ก่อนทั้งคู่)
         self.load_model_components()
-        
-        # Render UI components
         self.render_header()
         self.render_sidebar()
-        
-        # Main content tabs
         tab1, tab2, tab3 = st.tabs(["🔍 Single Message", "📁 Batch Analysis", "🤖 Model Info"])
-        
-        with tab1:
-            self.render_prediction_interface()
-        
-        with tab2:
-            self.render_batch_analysis()
-        
-        with tab3:
-            self.render_model_info()
-        
-        # Footer
+        with tab1: self.render_prediction_interface()
+        with tab2: self.render_batch_analysis()
+        with tab3: self.render_model_info()
         st.markdown("---")
-        st.markdown(
-            "<div style='text-align: center; color: #888;'>"
-            "Thai Spam Detection System © 2026 | Built with Streamlit & Transformers"
-            "</div>", 
-            unsafe_allow_html=True
-        )
+        st.markdown("<div style='text-align: center; color: #888;'>Thai Spam Detection System © 2026 | Built with Streamlit & Transformers</div>", unsafe_allow_html=True)
 
-# Main execution
 if __name__ == "__main__":
     ui = ThaiSpamDetectionUI()
     ui.run()
