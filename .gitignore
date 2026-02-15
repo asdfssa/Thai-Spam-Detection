@@ -133,7 +133,8 @@ dmypy.json
 Thumbs.db
 
 # Project specific
-*.pkl
+# *.pkl  # Commented out to allow model files
+!models/*.pkl  # Allow model files in models directory
 *.log
 temp/
 tmp/
