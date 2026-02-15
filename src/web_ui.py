@@ -42,12 +42,12 @@ st.markdown("""
         margin: 1rem 0;
     }
     .spam-box {
-        background-color: #ff6b6b;
-        color: white;
+        background-color: #ff6b6b !important;
+        color: white !important;
     }
     .ham-box {
-        background-color: #2d6a4f;
-        color: white;
+        background-color: #2d6a4f !important;
+        color: white !important;
     }
     .metric-card {
         background-color: #f8f9fa;
@@ -66,6 +66,14 @@ st.markdown("""
     .status-ready { background-color: #2d6a4f; }
     .status-processing { background-color: #ffd43b; }
     .status-error { background-color: #ff6b6b; }
+    
+    /* Force light theme colors */
+    .stApp {
+        background-color: white !important;
+    }
+    .css-1d391kg {
+        background-color: white !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
