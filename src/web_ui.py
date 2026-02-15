@@ -27,35 +27,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Force wide layout and prevent compression
-st.markdown("""
-<style>
-    .main .block-container {
-        max-width: 1200px !important;
-        padding-top: 2rem !important;
-        padding-right: 2rem !important;
-        padding-left: 2rem !important;
-        padding-bottom: 2rem !important;
-    }
-    
-    /* Ensure full width usage */
-    .stApp > div {
-        width: 100% !important;
-    }
-    
-    /* Sidebar width fix */
-    .css-1lcbmhc {
-        width: 300px !important;
-    }
-    
-    /* Main content area */
-    .css-1d391kg {
-        width: 100% !important;
-        max-width: none !important;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # Custom CSS
 st.markdown("""
 <style>
@@ -71,12 +42,12 @@ st.markdown("""
         margin: 1rem 0;
     }
     .spam-box {
-        background-color: #ff6b6b !important;
-        color: white !important;
+        background-color: #ff6b6b;
+        color: white;
     }
     .ham-box {
-        background-color: #2d6a4f !important;
-        color: white !important;
+        background-color: #2d6a4f;
+        color: white;
     }
     .metric-card {
         background-color: #f8f9fa;
@@ -95,14 +66,6 @@ st.markdown("""
     .status-ready { background-color: #2d6a4f; }
     .status-processing { background-color: #ffd43b; }
     .status-error { background-color: #ff6b6b; }
-    
-    /* Force light theme colors */
-    .stApp {
-        background-color: white !important;
-    }
-    .css-1d391kg {
-        background-color: white !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
