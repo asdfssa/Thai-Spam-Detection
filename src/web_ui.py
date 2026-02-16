@@ -39,7 +39,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS (คงเดิม)
+# Custom CSS
 st.markdown("""
 <style>
     .main-header {
@@ -62,6 +62,12 @@ st.markdown("""
         background-color: rgba(45, 106, 79, 0.4); 
         border: 1px solid #40c057;
         color: #b2f2bb;
+    }
+    /* 🔥 เพิ่มสีเหลืองสำหรับความมั่นใจต่ำ */
+    .suspicious-box {
+        background-color: rgba(255, 212, 59, 0.2); 
+        border: 1px solid #ffd43b;
+        color: #fff3bf;
     }
     .status-indicator {
         display: inline-block;
@@ -99,7 +105,7 @@ class ThaiSpamDetectionUI:
                 self.model.load_model(model_path)
                 self.model.preprocessor.load_preprocessor(vectorizer_path, encoder_path)
             
-            # 2. โหลด Deep Learning (ผ่านฟังก์ชันที่แก้ใหม่)
+            # 2. โหลด Deep Learning
             self.hf_model = load_hf_pipeline()
             
         except Exception as e:
@@ -162,7 +168,7 @@ class ThaiSpamDetectionUI:
         - Thai text preprocessing with pythainlp
         - Multiple ML algorithms (TF-IDF & Deep Learning)
         - Real-time prediction
-        - Confidence scoring
+        - Confidence scoring (Yellow Alert < 0.70)
         - Performance visualization
         """)
     
@@ -239,7 +245,17 @@ class ThaiSpamDetectionUI:
     def render_prediction_result(self, result, original_text):
         st.markdown("### 📊 Analysis Results")
         
-        if result['label'].lower() == 'spam':
+        # 🔥 Logic ระบบ 3 สี (เขียว/เหลือง/แดง)
+        if result['confidence'] < 0.70:
+            st.markdown(f"""
+            <div class="prediction-box suspicious-box">
+                <h3>🟡 น่าสงสัย (กรุณาตรวจสอบซ้ำ)</h3>
+                <p><strong>Predicted as:</strong> {result['label'].upper()}</p>
+                <p><strong>Confidence:</strong> {result['confidence']:.2%} (ต่ำกว่าเกณฑ์ 70.00%)</p>
+                <p><strong>Spam Probability:</strong> {result['spam_probability']:.2%}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        elif result['label'].lower() == 'spam':
             st.markdown(f"""
             <div class="prediction-box spam-box">
                 <h3>🚨 SPAM DETECTED!</h3>
