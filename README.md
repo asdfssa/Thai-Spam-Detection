@@ -2,6 +2,8 @@
 
 A comprehensive Thai language spam detection system built with machine learning and natural language processing.
 
+[![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow)](https://huggingface.co/MuneTH1/thai-spam-wangchanberta)
+
 ## Features
 
 - **Thai Text Processing**: Advanced tokenization and preprocessing using `pythainlp`

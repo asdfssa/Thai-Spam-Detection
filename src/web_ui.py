@@ -19,7 +19,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from model_training import SpamDetectionModel
 from model_evaluation import ModelEvaluator
 
-# --- โหลดโมเดล Deep Learning จาก Hugging Face (แก้ไขส่วนนี้เพื่อรองรับ Cloud) ---
+# --- โหลดโมเดล Deep Learning จาก Hugging Face (สำหรับ Cloud Deployment) ---
 @st.cache_resource
 def load_hf_pipeline():
     try:
