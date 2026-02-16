@@ -1,11 +1,2 @@
 [theme]
 base="dark"
-primaryColor="#4dabf7"          # สีฟ้าแบบเดียวกับ Header ของคุณ
-backgroundColor="#0e1117"       # สีพื้นหลังเข้มมาตรฐาน
-secondaryBackgroundColor="#1a1c23" # สีพื้นหลัง Sidebar
-textColor="#fafafa"             # สีตัวอักษรให้ขาวนวล
-
-[server]
-headless = true
-enableCORS = false
-enableXsrfProtection = false

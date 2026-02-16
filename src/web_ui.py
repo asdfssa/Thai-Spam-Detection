@@ -39,48 +39,46 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS (ฉบับแก้ไขเพื่อ Deployment)
+# Custom CSS
 st.markdown("""
 <style>
     .main-header {
-        font-size: 2.5rem !important;
-        color: #4dabf7 !important; 
-        text-align: center !important;
-        margin-bottom: 2rem !important;
+        font-size: 2.5rem;
+        color: #4dabf7; 
+        text-align: center;
+        margin-bottom: 2rem;
     }
     .prediction-box {
-        padding: 1.5rem !important;
-        border-radius: 10px !important;
-        margin: 1rem 0 !important;
-        display: block !important;
-        width: 100% !important;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 1rem 0;
     }
     .spam-box {
-        background-color: rgba(255, 107, 107, 0.25) !important; 
-        border: 2px solid #ff6b6b !important;
-        color: #ffc9c9 !important;
+        background-color: rgba(255, 107, 107, 0.2); 
+        border: 1px solid #ff6b6b;
+        color: #ffc9c9;
     }
     .ham-box {
-        background-color: rgba(45, 106, 79, 0.45) !important; 
-        border: 2px solid #40c057 !important;
-        color: #b2f2bb !important;
+        background-color: rgba(45, 106, 79, 0.4); 
+        border: 1px solid #40c057;
+        color: #b2f2bb;
     }
-    /* 🔥 ป้ายเหลืองฉบับสู้แสงบน Cloud */
+    /* 🔥 เพิ่มสีเหลืองสำหรับความมั่นใจต่ำ */
     .suspicious-box {
-        background-color: rgba(255, 212, 59, 0.25) !important; 
-        border: 2px solid #ffd43b !important;
-        color: #fff3bf !important;
+        background-color: rgba(255, 212, 59, 0.2); 
+        border: 1px solid #ffd43b;
+        color: #fff3bf;
     }
     .status-indicator {
-        display: inline-block !important;
-        width: 12px !important;
-        height: 12px !important;
-        border-radius: 50% !important;
-        margin-right: 8px !important;
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
     }
-    .status-ready { background-color: #40c057 !important; }
-    .status-processing { background-color: #ffd43b !important; }
-    .status-error { background-color: #ff6b6b !important; }
+    .status-ready { background-color: #40c057; }
+    .status-processing { background-color: #ffd43b; }
+    .status-error { background-color: #ff6b6b; }
 </style>
 """, unsafe_allow_html=True)
 
